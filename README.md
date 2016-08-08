@@ -19,13 +19,11 @@ var PdfTable = require('voilab-pdf-table'),
 module.exports = {
     create: function () {
         var pdf = new PdfDocument({
-            bufferPages: true,
-            autoFirstPage: false
-        });
-
-        table = new PdfTable(pdf, {
-            bottomMargin: 30
-        });
+                autoFirstPage: false
+            }),
+            table = new PdfTable(pdf, {
+                bottomMargin: 30
+            });
 
         table
             .addPlugin(new (require('voilab-pdf-table/plugins/fitcolumn'))({
@@ -54,9 +52,9 @@ module.exports = {
                 {
                     id: 'total',
                     header: 'Total',
-                    width: pdf.mm(30),
+                    width: 70,
                     renderer: function (tb, data) {
-                        return 'CHF ' + data;
+                        return 'CHF ' + data.total;
                     }
                 }
             ])
@@ -72,7 +70,6 @@ module.exports = {
             {description: 'Product 3', quantity: 2, price: 17.85, total: 35.70}
         ]);
 
-        pdf.flush();
         return pdf;
     }
 };
