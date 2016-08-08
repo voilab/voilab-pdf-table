@@ -1,0 +1,35 @@
+{
+  "name": "voilab-pdf-table",
+  "version": "0.1.0",
+  "description": "PdfKit wrapper that helps to draw informations in simple tables.",
+  "main": "voilab-table.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/voilab/voilab-pdf-table.git"
+  },
+  "keywords": [
+    "pdfkit",
+    "table"
+  ],
+  "dependencies": {
+    "lodash": "4.*"
+  },
+  "author": {
+    "name": "Fabien Tafelmacher"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/voilab/voilab-pdf-table/issues"
+  },
+  "homepage": "https://github.com/voilab/voilab-pdf-table#readme",
+  "maintainers": [
+    {
+      "name": "tafel",
+      "email": "fabien@voilab.ch"
+    }
+  ],
+  "directories": {}
+}
