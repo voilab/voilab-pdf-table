@@ -11,30 +11,32 @@ var lodash = require('lodash'),
      * margins
      */
     PdfTableFitColumn = function (conf) {
-        lodash.merge(this, lodash.clone(conf || {}));
+        lodash.merge(this, {
+
+            id: 'fitcolumn',
+
+            /**
+             * Stretched column index
+             * @var {String}
+             */
+            column: null,
+
+            /**
+             * Table max width. Default to page width minus margins
+             * @var {Number}
+             */
+            maxWidth: null,
+
+            /**
+             * Calculated width at EV_BODY_ADD event
+             * @var {Number}
+             */
+            calculatedWidth: null
+
+        }, lodash.clone(conf || {}));
     };
 
 lodash.assign(PdfTableFitColumn.prototype, {
-
-    id: 'fitcolumn',
-
-    /**
-     * Stretched column index
-     * @var {String}
-     */
-    column: null,
-
-    /**
-     * Table max width. Default to page width minus margins
-     * @var {Number}
-     */
-    maxWidth: null,
-
-    /**
-     * Calculated width at EV_BODY_ADD event
-     * @var {Number}
-     */
-    calculatedWidth: null,
 
     /**
      * Configure plugin by attaching functions to table events

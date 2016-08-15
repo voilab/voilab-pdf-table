@@ -140,9 +140,56 @@ var lodash = require('lodash'),
     },
 
     PdfTable = function (pdf, conf) {
-        lodash.merge(this, lodash.cloneDeep(conf || {}));
-        this.pdf = pdf;
-        this.emitter = new EventEmitter();
+        lodash.merge(this, {
+            /**
+             * List of columns
+             * @var {Array}
+             */
+            columns: [],
+
+            /**
+             * Defaults for all new columns
+             * @var {Object}
+             */
+            columnsDefaults: {},
+
+            /**
+             * List of plugins (do not set it at construction time)
+             * @var {Array}
+             */
+            plugins: [],
+
+            /**
+             * The number to put inside the pdfkit.moveDown() method
+             * @var {Number}
+             */
+            minRowHeight: 1,
+
+            /**
+             * Height of the bottom margin, in point
+             * @var {Number}
+             */
+            bottomMargin: 5,
+
+            /**
+             * Check if we want to show headers when {@link addBody()}
+             * @var {Boolean}
+             */
+            showHeaders: true,
+
+            /**
+             * Pdf in which the table will be drawn
+             * @var {PdfDocument}
+             */
+            pdf: pdf,
+
+            /**
+             * Event emitter
+             * @var {EventEmitter}
+             */
+            emitter: new EventEmitter()
+
+        }, lodash.cloneDeep(conf || {}));
     };
 
 lodash.assign(PdfTable.prototype, {
@@ -313,42 +360,6 @@ lodash.assign(PdfTable.prototype, {
         this.emitter.on('column-width-changed', fn);
         return this;
     },
-
-    /**
-     * List of columns
-     * @var {Array}
-     */
-    columns: [],
-
-    /**
-     * Defaults for all new columns
-     * @var {Object}
-     */
-    columnsDefaults: {},
-
-    /**
-     * List of plugins (do not set it at construction time)
-     * @var {Array}
-     */
-    plugins: [],
-
-    /**
-     * The number to put inside the pdfkit.moveDown() method
-     * @var {Number}
-     */
-    minRowHeight: 1,
-
-    /**
-     * Height of the bottom margin, in point
-     * @var {Number}
-     */
-    bottomMargin: 5,
-
-    /**
-     * Check if we want to show headers when {@link addBody()}
-     * @var {Boolean}
-     */
-    showHeaders: true,
 
     /**
      * Temporary hack to manage overriden addPage() for pdfkit
