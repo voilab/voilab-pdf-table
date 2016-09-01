@@ -68,14 +68,19 @@ var lodash = require('lodash'),
     addCell = function (self, column, row, pos, isHeader) {
         var width = column.width,
             padding_left = 0,
-            padding_top = 0;
+            padding_top = 0,
+            data = row._renderedContent.data[column.id] || '';
 
         if (!isHeader && column.padding) {
             padding_left = getPaddingValue('left', column.padding);
             padding_top = getPaddingValue('top', column.padding);
             width -= getPaddingValue('horizontal', column.padding);
         }
-        self.pdf.text(row._renderedContent.data[column.id] || '', pos.x + padding_left, pos.y + padding_top, lodash.assign({
+        // if specified, cache is not used and renderer is called one more time
+        if (column.cache === false) {
+            data = (isHeader ? column.headerRenderer : column.renderer)(self, row, true);
+        }
+        self.pdf.text(data, pos.x + padding_left, pos.y + padding_top, lodash.assign({
             height: row._renderedContent.height,
             width: width
         }, column));
@@ -120,7 +125,7 @@ var lodash = require('lodash'),
 
         lodash.forEach(self.getColumns(), function (column) {
             var renderer = isHeader ? column.headerRenderer : column.renderer,
-                content = (renderer && renderer(self, row)) || row[column.id],
+                content = (renderer && renderer(self, row, false)) || row[column.id],
                 height = self.pdf.heightOfString(content, lodash.assign(lodash.clone(column), {
                     width: column.width - getPaddingValue('horizontal', column.padding)
                 }));
@@ -425,7 +430,7 @@ lodash.assign(PdfTable.prototype, {
      * <ul>
      *     <li><i>String</i> <b>id</b>: column id</li>
      *     <li><i>Function</i> <b>renderer</b>: renderer function for cell.
-     *     Recieve (PdfTable table, row).</li>
+     *     Recieve (PdfTable table, row, draw).</li>
      *     <li><i>Boolean</i> <b>hidden</b>: True to define the column as
      *     hidden (default to false)</li>
      *     <li><i>String</i> <b>border</b>: cell border (LTBR)</li>
@@ -436,6 +441,9 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>String</i> <b>border</b>: cell border (LTBR)</li>
      *     <li><i>Boolean</i> <b>fill</b>: True to fill the cell with the
      *     predefined color (with pdf.fillColor(color))</li>
+     *     <li><i>Boolean</i> <b>cache</b>: false to disable cache content. The
+     *     renderer will be called twice (at height calculation time and when
+     *     really rendering the content)</li>
      * </ul>
      *
      * Specific to column header
