@@ -67,20 +67,23 @@ var lodash = require('lodash'),
 
     addCell = function (self, column, row, pos, isHeader) {
         var width = column.width,
-            padding_left = 0,
-            padding_top = 0,
-            data = row._renderedContent.data[column.id] || '';
+            padding = {
+                left: 0,
+                top: 0
+            },
+            data = row._renderedContent.data[column.id] || '',
+            renderer = isHeader ? column.headerRenderer : column.renderer;
 
         if (!isHeader && column.padding) {
-            padding_left = getPaddingValue('left', column.padding);
-            padding_top = getPaddingValue('top', column.padding);
+            padding.left = getPaddingValue('left', column.padding);
+            padding.top = getPaddingValue('top', column.padding);
             width -= getPaddingValue('horizontal', column.padding);
         }
         // if specified, cache is not used and renderer is called one more time
-        if (column.cache === false) {
-            data = (isHeader ? column.headerRenderer : column.renderer)(self, row, true);
+        if (renderer && column.cache === false) {
+            data = renderer(self, row, true, column, lodash.clone(pos), padding);
         }
-        self.pdf.text(data, pos.x + padding_left, pos.y + padding_top, lodash.assign({
+        self.pdf.text(data, pos.x + padding.left, pos.y + padding.top, lodash.assign({
             height: row._renderedContent.height,
             width: width
         }, column));
