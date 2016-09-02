@@ -72,18 +72,27 @@ var lodash = require('lodash'),
                 top: 0
             },
             data = row._renderedContent.data[column.id] || '',
-            renderer = isHeader ? column.headerRenderer : column.renderer;
+            renderer = isHeader ? column.headerRenderer : column.renderer,
+            y = pos.y;
 
         if (!isHeader && column.padding) {
             padding.left = getPaddingValue('left', column.padding);
             padding.top = getPaddingValue('top', column.padding);
             width -= getPaddingValue('horizontal', column.padding);
         }
+        y += padding.top;
         // if specified, cache is not used and renderer is called one more time
         if (renderer && column.cache === false) {
             data = renderer(self, row, true, column, lodash.clone(pos), padding);
         }
-        self.pdf.text(data, pos.x + padding.left, pos.y + padding.top, lodash.assign({
+        // manage vertical alignement
+        if (column.valign === 'center') {
+            y += (row._renderedContent.height - row._renderedContent.dataHeight[column.id]) / 2;
+        } else if (column.valign === 'bottom') {
+            y += (row._renderedContent.height - row._renderedContent.dataHeight[column.id]);
+        }
+
+        self.pdf.text(data, pos.x + padding.left, y, lodash.assign({
             height: row._renderedContent.height,
             width: width
         }, column));
@@ -124,22 +133,24 @@ var lodash = require('lodash'),
     setRowHeight = function (self, row, isHeader) {
         var max_height = 0;
 
-        row._renderedContent = {data: {}};
+        row._renderedContent = {data: {}, dataHeight: {}};
 
         lodash.forEach(self.getColumns(), function (column) {
             var renderer = isHeader ? column.headerRenderer : column.renderer,
-                content = (renderer && renderer(self, row, false)) || row[column.id],
-                height = self.pdf.heightOfString(content, lodash.assign(lodash.clone(column), {
+                content = renderer ? renderer(self, row, false) : row[column.id],
+                height = !content ? 1 : self.pdf.heightOfString(content, lodash.assign(lodash.clone(column), {
                     width: column.width - getPaddingValue('horizontal', column.padding)
-                }));
+                })),
+                column_height = isHeader ? column.headerHeight : column.height;
+
+            if (height < column_height) {
+                height = column_height;
+            }
 
             // backup content so we don't need to call the renderer a second
             // time when really rendering the column
             row._renderedContent.data[column.id] = content;
-
-            if (height < column.height) {
-                height = column.height;
-            }
+            row._renderedContent.dataHeight[column.id] = height;
 
             // check max row height
             max_height = height > max_height ? height : max_height;
@@ -440,7 +451,10 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>Number</i> <b>width</b>: column width</li>
      *     <li><i>Number</i> <b>height</b>: min height for cell (default to
      *     standard linebreak)</li>
-     *     <li><i>String</i> <b>align</b>: text horizontal align</li>
+     *     <li><i>String</i> <b>align</b>: text horizontal align (left, center,
+     *     right)</li>
+     *     <li><i>String</i> <b>valign</b>: text vertical align (top, center,
+     *     bottom)</li>
      *     <li><i>String</i> <b>border</b>: cell border (LTBR)</li>
      *     <li><i>Boolean</i> <b>fill</b>: True to fill the cell with the
      *     predefined color (with pdf.fillColor(color))</li>
@@ -457,6 +471,8 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>String</i> <b>headerBorder</b>: cell border (LTBR)</li>
      *     <li><i>Boolean</i> <b>headerFill</b>: True to fill the header with
      *     the predefined color (with pdf.fillColor(color))</li>
+     *     <li><i>Number</i> <b>headerHeight</b>: min height for cell (default
+     *     to standard linebreak)</li>
      * </ul>
      *
      * Work in progress
