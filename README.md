@@ -42,7 +42,7 @@ module.exports = {
                 {
                     id: 'quantity',
                     header: 'Quantity',
-                    width: 40
+                    width: 50
                 },
                 {
                     id: 'price',
@@ -83,6 +83,29 @@ app.get('/some/route', function (req, res, next) {
    pdf.end();
 });
 ```
+
+### Page breaks
+
+You can customize how page breaks are done during table process like this:
+
+```js
+table.setNewPageFn(function (table, row) {
+    // do something like
+    table.pdf.addPage();
+});
+```
+
+## Changelogs
+
+### 0.2.0
++ added event `onColumnPropertyChanged`
++ added event `onColumnAdded`
++ removed `onColumnWidthChanged`. Use `onColumnPropertyChanged` instead.
+Deprecated mention will be definitively removed in next release
++ Issue #1 fix
+
+### 0.1.5
+First shot
 
 ## Licence
 
