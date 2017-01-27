@@ -105,7 +105,7 @@ var lodash = require('lodash'),
         if (self.pdf.y + row._renderedContent.height > self.pdf.page.height - self.pdf.page.margins.bottom - self.bottomMargin) {
             self.emitter.emit('page-add', self);
             if (self.newPageFn) {
-                self.newPageFn(self);
+                self.newPageFn(self, row);
                 self.emitter.emit('page-added', self);
             }
         }
@@ -373,10 +373,40 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
      *     <li><i>Object</i> <b>column</b> the column that changed</li>
      * </ul>
+     * @deprecated
      * @return {PdfTable}
      */
     onColumnWidthChanged: function (fn) {
+        console.log("this event is deprecated, use onColumnPropertyChanged instead");
         this.emitter.on('column-width-changed', fn);
+        return this;
+    },
+
+    /**
+     * Add action after a column is added
+     * <ul>
+     *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
+     *     <li><i>Object</i> <b>column</b> the added column</li>
+     * </ul>
+     * @return {PdfTable}
+     */
+    onColumnAdded: function (fn) {
+        this.emitter.on('column-added', fn);
+        return this;
+    },
+
+    /**
+     * Add action after a column's property is changed
+     * <ul>
+     *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
+     *     <li><i>Object</i> <b>column</b> the column< that changed/li>
+     *     <li><i>string</i> <b>prop</b> the property that changed</li>
+     *     <li><i>mixed</i> <b>oldValue</b> the property value before change/li>
+     * </ul>
+     * @return {PdfTable}
+     */
+    onColumnPropertyChanged: function (fn) {
+        this.emitter.on('column-property-changed', fn);
         return this;
     },
 
@@ -455,7 +485,6 @@ lodash.assign(PdfTable.prototype, {
      *     right)</li>
      *     <li><i>String</i> <b>valign</b>: text vertical align (top, center,
      *     bottom)</li>
-     *     <li><i>String</i> <b>border</b>: cell border (LTBR)</li>
      *     <li><i>Boolean</i> <b>fill</b>: True to fill the cell with the
      *     predefined color (with pdf.fillColor(color))</li>
      *     <li><i>Boolean</i> <b>cache</b>: false to disable cache content. The
@@ -486,7 +515,7 @@ lodash.assign(PdfTable.prototype, {
      */
     addColumn: function (column) {
         this.columns.push(lodash.assign(lodash.clone(this.columnsDefaults || {}), column));
-        this.setColumnWidth(column.id, column.width);
+        this.emitter.emit('column-added', this, column);
         return this;
     },
 
@@ -683,11 +712,14 @@ lodash.assign(PdfTable.prototype, {
      * @return {PdfTable}
      */
     setColumnParam: function (columnId, key, value, silent) {
-        var column = this.getColumn(columnId);
+        var column = this.getColumn(columnId),
+            old_value;
+
         if (column) {
+            old_value = column[key];
             column[key] = value;
-            if (!silent && key === 'width') {
-                this.emitter.emit('column-width-changed', this, column);
+            if (!silent) {
+                this.emitter.emit('column-property-changed', this, column, key, old_value);
             }
         }
         return this;
@@ -721,6 +753,10 @@ lodash.assign(PdfTable.prototype, {
             self.emitter.emit('row-added', self, row);
         });
         this.emitter.emit('body-added', this, data);
+
+        // Issue #1, restore x position after table is drawn
+        self.pdf.x = self.pdf.page.margins.left;
+
         return this;
     },
 

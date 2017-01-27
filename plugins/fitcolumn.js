@@ -47,7 +47,34 @@ lodash.assign(PdfTableFitColumn.prototype, {
     configure: function (table) {
         table
             .onBodyAdd(this.setWidth.bind(this))
-            .onColumnWidthChanged(this.reinitWidth.bind(this));
+            .onColumnAdded(this.onColumnAdded.bind(this))
+            .onColumnPropertyChanged(this.onColumnPropertyChanged.bind(this));
+    },
+
+    /**
+     * Reinit width after a column is added
+     *
+     * @param {PdfTable}
+     * @return {PdfTableFitColumn}
+     */
+    onColumnAdded: function (table) {
+        return this.reinitWidth(table);
+    },
+
+    /**
+     * Reinit width after width or hidden property changed
+     *
+     * @param {PdfTable} table
+     * @param {Object} column
+     * @param {String} prop
+     * @return {PdfTableFitColumn}
+     */
+    onColumnPropertyChanged: function (table, column, prop) {
+        // manage width changes and show/hide changes
+        if (prop !== 'width' && prop !== 'hidden') {
+            return this;
+        }
+        return this.reinitWidth(table);
     },
 
     /**
