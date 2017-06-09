@@ -45,11 +45,12 @@ var lodash = require('lodash'),
             .fill();
     },
 
-    addCellBorder = function (self, column, row, pos, border, isHeader) {
-        var bpos = {
-            x: pos.x + column.width,
-            y: pos.y + row._renderedContent.height
-        };
+    addCellBorder = function (self, column, row, pos, isHeader) {
+        var border = isHeader ? column.headerBorder : column.border,
+            bpos = {
+                x: pos.x + column.width,
+                y: pos.y + row._renderedContent.height
+            };
 
         if (border.indexOf('L') !== -1) {
             self.pdf.moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).stroke();
@@ -101,26 +102,29 @@ var lodash = require('lodash'),
     },
 
     addRow = function (self, row, isHeader) {
+        var pos = {
+                x: self.pdf.page.margins.left,
+                y: self.pdf.y
+            },
+            ev = {
+                cancel: false
+            };
+
         // the content might be higher than the remaining height on the page.
         if (self.pdf.y + row._renderedContent.height > self.pdf.page.height - self.pdf.page.margins.bottom - self.bottomMargin) {
-            self.emitter.emit('page-add', self);
-            if (self.newPageFn) {
-                self.newPageFn(self, row);
-                self.emitter.emit('page-added', self);
+            self.emitter.emit('page-add', self, row, ev);
+            if (!ev.cancel) {
+                self.pdf.addPage();
             }
+            self.emitter.emit('page-added', self, row);
         }
-
-        var pos = {
-            x: self.pdf.page.margins.left,
-            y: self.pdf.y
-        };
 
         lodash.forEach(self.getColumns(), function (column) {
             if ((!isHeader && column.fill) || (isHeader && column.headerFill)) {
                 addCellBackground(self, column, row, pos, isHeader);
             }
             if ((!isHeader && column.border) || (isHeader && column.headerBorder)) {
-                addCellBorder(self, column, row, pos, (isHeader ? column.headerBorder : column.border), isHeader);
+                addCellBorder(self, column, row, pos, isHeader);
             }
             addCell(self, column, row, pos, isHeader);
         });
@@ -292,9 +296,13 @@ lodash.assign(PdfTable.prototype, {
     },
 
     /**
-     * Add action before a page is added
+     * Add action before a page is added. You can use <em>ev.cancel = true</em>
+     * to cancel automatic page add, so you can do whatever you want to add
+     * a new page.
      * <ul>
      *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
+     *     <li><i>Object</i> <b>row</b> the current row</li>
+     *     <li><i>Object</i> <b>ev</b> the event</li>
      * </ul>
      * @return {PdfTable}
      */
@@ -307,6 +315,7 @@ lodash.assign(PdfTable.prototype, {
      * Add action after a page is added.
      * <ul>
      *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
+     *     <li><i>Object</i> <b>row</b> the current row</li>
      * </ul>
      * @return {PdfTable}
      */
@@ -368,21 +377,6 @@ lodash.assign(PdfTable.prototype, {
     },
 
     /**
-     * Add action after a column's witch is changed
-     * <ul>
-     *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
-     *     <li><i>Object</i> <b>column</b> the column that changed</li>
-     * </ul>
-     * @deprecated
-     * @return {PdfTable}
-     */
-    onColumnWidthChanged: function (fn) {
-        console.log("this event is deprecated, use onColumnPropertyChanged instead");
-        this.emitter.on('column-width-changed', fn);
-        return this;
-    },
-
-    /**
      * Add action after a column is added
      * <ul>
      *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
@@ -413,11 +407,12 @@ lodash.assign(PdfTable.prototype, {
     /**
      * Temporary hack to manage overriden addPage() for pdfkit
      *
+     * @deprecated
      * @param {Function} fn
      * @return {PdfTable}
      */
     setNewPageFn: function (fn) {
-        this.newPageFn = fn;
+        console.log('setNewPageFn is deprecated. Adding a page during process is automatic now. It will be removed on the next release');
         return this;
     },
 
@@ -735,6 +730,10 @@ lodash.assign(PdfTable.prototype, {
         var self = this;
         this.emitter.emit('body-add', this, data);
 
+        if (!this.pdf.page) {
+            throw new Error("No page available. Add a page to the PDF before calling addBody()");
+        }
+
         if (this.showHeaders) {
             this.addHeader();
         }
@@ -755,7 +754,7 @@ lodash.assign(PdfTable.prototype, {
         this.emitter.emit('body-added', this, data);
 
         // Issue #1, restore x position after table is drawn
-        self.pdf.x = self.pdf.page.margins.left;
+        this.pdf.x = this.pdf.page.margins.left;
 
         return this;
     },
