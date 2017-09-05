@@ -129,7 +129,7 @@ var lodash = require('lodash'),
             addCell(self, column, row, pos, isHeader);
         });
 
-        self.pdf.y = pos.y + row._renderedContent.height;
+        self.pdf.y = self.pdf.y + row._renderedContent.height;
 
         self.pdf.moveDown(self.minRowHeight);
     },
