@@ -105,8 +105,9 @@ var lodash = require('lodash'),
         var pos = {
                 x: self.pdf.page.margins.left,
                 y: self.pdf.y
-            },
-            ev = {
+            }
+
+        var ev = {
                 cancel: false
             };
 
@@ -114,7 +115,9 @@ var lodash = require('lodash'),
         if (self.pdf.y + row._renderedContent.height > self.pdf.page.height - self.pdf.page.margins.bottom - self.bottomMargin) {
             self.emitter.emit('page-add', self, row, ev);
             if (!ev.cancel) {
-                self.pdf.addPage();
+                self.pdf.addPage({ margins: self.pdf.page.margins });                
+                self.pdf.y = self.pdf.page.margins.top;
+                pos.y = self.pdf.y;
             }
             self.emitter.emit('page-added', self, row);
         }
