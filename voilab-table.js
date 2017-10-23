@@ -115,6 +115,8 @@ var lodash = require('lodash'),
             self.emitter.emit('page-add', self, row, ev);
             if (!ev.cancel) {
                 self.pdf.addPage();
+                // Reset Y position for next page
+                pos.y = self.pdf.page.margins.top;
             }
             self.emitter.emit('page-added', self, row);
         }
