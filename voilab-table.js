@@ -53,16 +53,16 @@ var lodash = require('lodash'),
             };
 
         if (border.indexOf('L') !== -1) {
-            self.pdf.moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).stroke();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).lineCap('square').stroke().restore();
         }
         if (border.indexOf('T') !== -1) {
-            self.pdf.moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y).stroke();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y).lineCap('square').stroke().restore();
         }
         if (border.indexOf('B') !== -1) {
-            self.pdf.moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y).stroke();
+            self.pdf.save().moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
         }
         if (border.indexOf('R') !== -1) {
-            self.pdf.moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y).stroke();
+            self.pdf.save().moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
         }
     },
 
@@ -74,29 +74,48 @@ var lodash = require('lodash'),
             },
             data = row._renderedContent.data[column.id] || '',
             renderer = isHeader ? column.headerRenderer : column.renderer,
-            y = pos.y;
+            y = pos.y,
+            x = pos.x;
 
-        if (!isHeader && column.padding) {
-            padding.left = getPaddingValue('left', column.padding);
-            padding.top = getPaddingValue('top', column.padding);
-            width -= getPaddingValue('horizontal', column.padding);
+        // Top and bottom padding (only if valign is not set)
+        if (!column.valign) {
+            if (isHeader) {
+                padding.top = getPaddingValue('top', column.headerPadding);
+                padding.bottom = getPaddingValue('bottom', column.headerPadding);
+                y += padding.top;
+            } else if (!isHeader) {
+                padding.top = getPaddingValue('top', column.padding);
+                padding.bottom = getPaddingValue('bottom', column.padding);
+                y += padding.top;
+            }
         }
-        y += padding.top;
+
+        // Left and right padding
+        if (!isHeader) {
+            padding.left = getPaddingValue('left', column.padding);
+            width -= getPaddingValue('horizontal', column.padding);
+            x += padding.left;
+        } else {
+            padding.left = getPaddingValue('left', column.headerPadding);
+            width -= getPaddingValue('horizontal', column.headerPadding);
+            x += padding.left;
+        }
+
         // if specified, cache is not used and renderer is called one more time
         if (renderer && column.cache === false) {
             data = renderer(self, row, true, column, lodash.clone(pos), padding);
         }
         // manage vertical alignement
         if (column.valign === 'center') {
-            y += (row._renderedContent.height - row._renderedContent.dataHeight[column.id]) / 2;
+            y += (row._renderedContent.height - row._renderedContent.contentHeight[column.id]) / 2;
         } else if (column.valign === 'bottom') {
-            y += (row._renderedContent.height - row._renderedContent.dataHeight[column.id]);
+            y += (row._renderedContent.height - row._renderedContent.contentHeight[column.id]);
         }
 
-        self.pdf.text(data, pos.x + padding.left, y, lodash.assign({
+        self.pdf.text(data, x, y, lodash.assign({}, column, {
             height: row._renderedContent.height,
             width: width
-        }, column));
+        }));
 
         pos.x += column.width;
     },
@@ -132,22 +151,28 @@ var lodash = require('lodash'),
         });
 
         self.pdf.y = pos.y + row._renderedContent.height;
-
-        self.pdf.moveDown(self.minRowHeight);
     },
 
     setRowHeight = function (self, row, isHeader) {
         var max_height = 0;
 
-        row._renderedContent = {data: {}, dataHeight: {}};
+        row._renderedContent = {data: {}, dataHeight: {}, contentHeight: {}};
 
         lodash.forEach(self.getColumns(), function (column) {
             var renderer = isHeader ? column.headerRenderer : column.renderer,
                 content = renderer ? renderer(self, row, false) : row[column.id],
-                height = !content ? 1 : self.pdf.heightOfString(content, lodash.assign(lodash.clone(column), {
-                    width: column.width - getPaddingValue('horizontal', column.padding)
-                })),
+                height = !content ? 1 : self.pdf.heightOfString(content, column),
                 column_height = isHeader ? column.headerHeight : column.height;
+
+            // Ssetup the content height
+            row._renderedContent.contentHeight[column.id] = height;
+
+            // Continue with the row height
+            if (isHeader) {
+                height += getPaddingValue('vertical', column.headerPadding);
+            } else {
+                height += getPaddingValue('vertical', column.padding);
+            }
 
             if (height < column_height) {
                 height = column_height;
@@ -757,6 +782,9 @@ lodash.assign(PdfTable.prototype, {
 
         // Issue #1, restore x position after table is drawn
         this.pdf.x = this.pdf.page.margins.left;
+
+        // Add margin to the bottom of the table
+        self.pdf.y += self.bottomMargin;
 
         return this;
     },
