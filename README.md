@@ -6,7 +6,7 @@ PdfKit wrapper that helps to draw informations in simple tables.
 ## Installation
 
 ```
-node install --save voilab-pdf-table
+npm install --save voilab-pdf-table
 ```
 
 ## Usage
