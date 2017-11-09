@@ -39,13 +39,19 @@ var lodash = require('lodash'),
         return 0;
     },
 
-    addCellBackground = function (self, column, row, pos, isHeader) {
+    addCellBackground = function (self, column, row, pos, index, isHeader) {
+        self.emitter.emit('cell-background-add', self, column, row, index, isHeader);
+
         self.pdf
             .rect(pos.x, pos.y, column.width, row._renderedContent.height)
             .fill();
+
+        self.emitter.emit('cell-background-added', self, column, row, index, isHeader);
     },
 
     addCellBorder = function (self, column, row, pos, isHeader) {
+        self.emitter.emit('cell-border-add', self, column, row, isHeader);
+
         var border = isHeader ? column.headerBorder : column.border,
             bpos = {
                 x: pos.x + column.width,
@@ -53,17 +59,19 @@ var lodash = require('lodash'),
             };
 
         if (border.indexOf('L') !== -1) {
-            self.pdf.moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).stroke();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).lineCap('square').stroke().restore();
         }
         if (border.indexOf('T') !== -1) {
-            self.pdf.moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y).stroke();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y).lineCap('square').stroke().restore();
         }
         if (border.indexOf('B') !== -1) {
-            self.pdf.moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y).stroke();
+            self.pdf.save().moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
         }
         if (border.indexOf('R') !== -1) {
-            self.pdf.moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y).stroke();
+            self.pdf.save().moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
         }
+
+        self.emitter.emit('cell-border-added', self, column, row, isHeader);
     },
 
     addCell = function (self, column, row, pos, isHeader) {
@@ -74,36 +82,57 @@ var lodash = require('lodash'),
             },
             data = row._renderedContent.data[column.id] || '',
             renderer = isHeader ? column.headerRenderer : column.renderer,
-            y = pos.y;
+            y = pos.y,
+            x = pos.x;
 
-        if (!isHeader && column.padding) {
-            padding.left = getPaddingValue('left', column.padding);
-            padding.top = getPaddingValue('top', column.padding);
-            width -= getPaddingValue('horizontal', column.padding);
+        // Top and bottom padding (only if valign is not set)
+        if (!column.valign) {
+            if (isHeader) {
+                padding.top = getPaddingValue('top', column.headerPadding);
+                padding.bottom = getPaddingValue('bottom', column.headerPadding);
+                y += padding.top;
+            } else if (!isHeader) {
+                padding.top = getPaddingValue('top', column.padding);
+                padding.bottom = getPaddingValue('bottom', column.padding);
+                y += padding.top;
+            }
         }
-        y += padding.top;
+
+        // Left and right padding
+        if (!isHeader) {
+            padding.left = getPaddingValue('left', column.padding);
+            padding.right = getPaddingValue('right', column.padding);
+            width -= getPaddingValue('horizontal', column.padding);
+            x += padding.left;
+        } else {
+            padding.left = getPaddingValue('left', column.headerPadding);
+            padding.right = getPaddingValue('right', column.headerPadding);
+            width -= getPaddingValue('horizontal', column.headerPadding);
+            x += padding.left;
+        }
+
         // if specified, cache is not used and renderer is called one more time
         if (renderer && column.cache === false) {
-            data = renderer(self, row, true, column, lodash.clone(pos), padding);
+            data = renderer(self, row, true, column, lodash.clone(pos), padding, isHeader);
         }
         // manage vertical alignement
         if (column.valign === 'center') {
-            y += (row._renderedContent.height - row._renderedContent.dataHeight[column.id]) / 2;
+            y += (row._renderedContent.height - row._renderedContent.contentHeight[column.id]) / 2;
         } else if (column.valign === 'bottom') {
-            y += (row._renderedContent.height - row._renderedContent.dataHeight[column.id]);
+            y += (row._renderedContent.height - row._renderedContent.contentHeight[column.id]);
         }
 
-        self.pdf.text(data, pos.x + padding.left, y, lodash.assign({
+        self.pdf.text(data, x, y, lodash.assign({}, column, {
             height: row._renderedContent.height,
             width: width
-        }, column));
+        }));
 
         pos.x += column.width;
     },
 
-    addRow = function (self, row, isHeader) {
+    addRow = function (self, row, index, isHeader) {
         var pos = {
-                x: self.pdf.page.margins.left,
+                x: self.pos.x || self.pdf.page.margins.left,
                 y: self.pdf.y
             },
             ev = {
@@ -111,19 +140,19 @@ var lodash = require('lodash'),
             };
 
         // the content might be higher than the remaining height on the page.
-        if (self.pdf.y + row._renderedContent.height > self.pdf.page.height - self.pdf.page.margins.bottom - self.bottomMargin) {
+        if (self.pdf.y + row._renderedContent.height > (self.pos.maxY || (self.pdf.page.height - self.pdf.page.margins.bottom) - self.bottomMargin)) {
             self.emitter.emit('page-add', self, row, ev);
             if (!ev.cancel) {
                 self.pdf.addPage();
                 // Reset Y position for next page
-                pos.y = self.pdf.page.margins.top;
+                pos.y = self.pos.y || self.pdf.page.margins.top;
             }
             self.emitter.emit('page-added', self, row);
         }
 
         lodash.forEach(self.getColumns(), function (column) {
             if ((!isHeader && column.fill) || (isHeader && column.headerFill)) {
-                addCellBackground(self, column, row, pos, isHeader);
+                addCellBackground(self, column, row, pos, index, isHeader);
             }
             if ((!isHeader && column.border) || (isHeader && column.headerBorder)) {
                 addCellBorder(self, column, row, pos, isHeader);
@@ -132,14 +161,12 @@ var lodash = require('lodash'),
         });
 
         self.pdf.y = pos.y + row._renderedContent.height;
-
-        self.pdf.moveDown(self.minRowHeight);
     },
 
     setRowHeight = function (self, row, isHeader) {
         var max_height = 0;
 
-        row._renderedContent = {data: {}, dataHeight: {}};
+        row._renderedContent = {data: {}, dataHeight: {}, contentHeight: {}};
 
         lodash.forEach(self.getColumns(), function (column) {
             var renderer = isHeader ? column.headerRenderer : column.renderer,
@@ -148,6 +175,16 @@ var lodash = require('lodash'),
                     width: column.width - getPaddingValue('horizontal', column.padding)
                 })),
                 column_height = isHeader ? column.headerHeight : column.height;
+
+            // Ssetup the content height
+            row._renderedContent.contentHeight[column.id] = height;
+
+            // Continue with the row height
+            if (isHeader) {
+                height += getPaddingValue('vertical', column.headerPadding);
+            } else {
+                height += getPaddingValue('vertical', column.padding);
+            }
 
             if (height < column_height) {
                 height = column_height;
@@ -207,6 +244,11 @@ var lodash = require('lodash'),
              * @var {PdfDocument}
              */
             pdf: pdf,
+
+            pos: {
+              x: pdf.x,
+              y: pdf.y,
+            },
 
             /**
              * Event emitter
@@ -388,6 +430,69 @@ lodash.assign(PdfTable.prototype, {
      */
     onColumnAdded: function (fn) {
         this.emitter.on('column-added', fn);
+        return this;
+    },
+
+
+    /**
+     * Add action before a cell background is added
+     * <ul>
+     *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
+     *     <li><i>Object</i> <b>column</b> the current column</li>
+     *     <li><i>Object</i> <b>row</b> the current row</li>
+     *     <li><i>Number</i> <b>index</b> the current row index</li>
+     *     <li><i>Boolean</i> <b>isHeader</b> true if it's a header cell</li>
+     * </ul>
+     * @return {PdfTable}
+     */
+    onCellBackgroundAdd: function (fn) {
+        this.emitter.on('cell-background-add', fn);
+        return this;
+    },
+
+    /**
+     * Add action after a cell background is added
+     * <ul>
+     *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
+     *     <li><i>Object</i> <b>column</b> the current column</li>
+     *     <li><i>Object</i> <b>row</b> the current row</li>
+     *     <li><i>Number</i> <b>index</b> the current row index</li>
+     *     <li><i>Boolean</i> <b>isHeader</b> true if it's a header cell</li>
+     * </ul>
+     * @return {PdfTable}
+     */
+    onCellBackgroundAdded: function (fn) {
+        this.emitter.on('cell-background-added', fn);
+        return this;
+    },
+
+    /**
+     * Add action before a cell border is added
+     * <ul>
+     *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
+     *     <li><i>Object</i> <b>column</b> the current column</li>
+     *     <li><i>Object</i> <b>row</b> the current row</li>
+     *     <li><i>Boolean</i> <b>isHeader</b> true if it's a header cell</li>
+     * </ul>
+     * @return {PdfTable}
+     */
+    onCellBorderAdd: function (fn) {
+        this.emitter.on('cell-border-add', fn);
+        return this;
+    },
+
+    /**
+     * Add action after a cell border is added
+     * <ul>
+     *     <li><i>PdfTable</i> <b>table</b> PdfTable behind the event</li>
+     *     <li><i>Object</i> <b>column</b> the current column</li>
+     *     <li><i>Object</i> <b>row</b> the current row</li>
+     *     <li><i>Boolean</i> <b>isHeader</b> true if it's a header cell</li>
+     * </ul>
+     * @return {PdfTable}
+     */
+    onCellBorderAdded: function (fn) {
+        this.emitter.on('cell-border-added', fn);
         return this;
     },
 
@@ -732,12 +837,15 @@ lodash.assign(PdfTable.prototype, {
         var self = this;
         this.emitter.emit('body-add', this, data);
 
+        var index = 0;
+
         if (!this.pdf.page) {
             throw new Error("No page available. Add a page to the PDF before calling addBody()");
         }
 
         if (this.showHeaders) {
-            this.addHeader();
+            this.addHeader(index);
+            index++;
         }
 
         // calculate height for each row, depending on multiline contents
@@ -748,15 +856,19 @@ lodash.assign(PdfTable.prototype, {
         this.emitter.emit('row-height-calculated', this, data);
 
         // really add rows, but now we know the exact height of each one
-        lodash.forEach(data, function (row) {
-            self.emitter.emit('row-add', self, row);
-            addRow(self, row);
-            self.emitter.emit('row-added', self, row);
+        lodash.forEach(data, function (row, i) {
+            var rowIndex = i + index;
+            self.emitter.emit('row-add', self, row, rowIndex);
+            addRow(self, row, rowIndex);
+            self.emitter.emit('row-added', self, row, rowIndex);
         });
         this.emitter.emit('body-added', this, data);
 
         // Issue #1, restore x position after table is drawn
-        this.pdf.x = this.pdf.page.margins.left;
+        this.pdf.x = this.pos.x || this.pdf.page.margins.left;
+
+        // Add margin to the bottom of the table
+        self.pdf.y += self.bottomMargin;
 
         return this;
     },
@@ -766,17 +878,18 @@ lodash.assign(PdfTable.prototype, {
      *
      * @return {PdfTable}
      */
-    addHeader: function () {
+    addHeader: function (index) {
         var row = lodash.reduce(this.getColumns(), function (acc, column) {
             acc[column.id] = column.header;
             return acc;
         }, {});
+
         this.emitter.emit('header-add', this, row);
 
         this.emitter.emit('header-height-calculate', this, row);
         setRowHeight(this, row, true);
         this.emitter.emit('header-height-calculated', this, row);
-        addRow(this, row, true);
+        addRow(this, row, index, true);
 
         this.emitter.emit('header-added', this, row);
         return this;
