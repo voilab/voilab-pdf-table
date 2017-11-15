@@ -106,6 +106,21 @@ table.onPageAdd(function (table, row, ev) {
 
 ## Changelogs
 
+### 0.4.0
+Thank you, contributors!
+
+**From #MichielDeMey**
+
++ better handling for padding
++ some modifications about pos calculation
+
+**From #cbwebdevelopment**
+
++ added `addonCellBackgroundAdd` and `onCellBackgroundAdded` events
++ added `onCellBorderAdd` and `onCellBorderAdded` events
++ the current row index is passed in events
++ some modifications about pos calculation
+
 ### 0.3.0
 + new pages are better handeled. No more need to call `setNewPageFn`
 + removed `setNewPageFn`. Check documentation for how you can customize page
