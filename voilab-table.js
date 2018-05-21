@@ -58,18 +58,19 @@ var lodash = require('lodash'),
                 y: pos.y + row._renderedContent.height
             };
 
-        if (border.indexOf('L') !== -1) {
-            self.pdf.save().moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).lineCap('square').stroke().restore();
+                if (border.indexOf('L') !== -1) {
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).lineCap('square').opacity(self.opacity).stroke().restore();
         }
         if (border.indexOf('T') !== -1) {
-            self.pdf.save().moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y).lineCap('square').opacity(self.opacity).stroke().restore();
         }
         if (border.indexOf('B') !== -1) {
-            self.pdf.save().moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y).lineCap('square').opacity(self.opacity).stroke().restore();
         }
         if (border.indexOf('R') !== -1) {
-            self.pdf.save().moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y).lineCap('square').opacity(self.opacity).stroke().restore();
         }
+
 
         self.emitter.emit('cell-border-added', self, column, row, isHeader);
     },
@@ -246,6 +247,12 @@ var lodash = require('lodash'),
              * @var {PdfDocument}
              */
             pdf: pdf,
+            
+            /**
+            * Values must be between 0 and 1
+            * 
+            */
+            opacity: 1,
 
             pos: {
                 x: pdf.x,
