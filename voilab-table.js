@@ -56,19 +56,27 @@ var lodash = require('lodash'),
             bpos = {
                 x: pos.x + column.width,
                 y: pos.y + row._renderedContent.height
+            },
+            doStroke = function () {
+                var opacity = (!isHeader && column.borderOpacity) || (isHeader && column.headerBorderOpacity);
+                self.pdf.lineCap('square').opacity(opacity || 1).stroke().restore();
             };
 
         if (border.indexOf('L') !== -1) {
-            self.pdf.save().moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y);
+            doStroke();
         }
         if (border.indexOf('T') !== -1) {
-            self.pdf.save().moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y);
+            doStroke();
         }
         if (border.indexOf('B') !== -1) {
-            self.pdf.save().moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y);
+            doStroke();
         }
         if (border.indexOf('R') !== -1) {
-            self.pdf.save().moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y);
+            doStroke();
         }
 
         self.emitter.emit('cell-border-added', self, column, row, isHeader);
@@ -582,6 +590,8 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>Boolean</i> <b>hidden</b>: True to define the column as
      *     hidden (default to false)</li>
      *     <li><i>String</i> <b>border</b>: cell border (LTBR)</li>
+     *     <li><i>Number</i> <b>borderOpacity</b>: cell border opacity, from 0
+     *     to 1</li>
      *     <li><i>Number</i> <b>width</b>: column width</li>
      *     <li><i>Number</i> <b>height</b>: min height for cell (default to
      *     standard linebreak)</li>
@@ -602,6 +612,8 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>Function</i> <b>headerRenderer</b>: renderer function for
      *     header cell. Recieve (PdfTable table, row)</li>
      *     <li><i>String</i> <b>headerBorder</b>: cell border (LTBR)</li>
+     *     <li><i>Number</i> <b>headerBorderOpacity</b>: cell border opacity,
+     *     from 0 to 1</li>
      *     <li><i>Boolean</i> <b>headerFill</b>: True to fill the header with
      *     the predefined color (with pdf.fillColor(color))</li>
      *     <li><i>Number</i> <b>headerHeight</b>: min height for cell (default

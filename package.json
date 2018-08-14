@@ -15,7 +15,7 @@
     "table"
   ],
   "dependencies": {
-    "lodash": "4.*"
+    "lodash": "^4.17.10"
   },
   "author": {
     "name": "Fabien Tafelmacher"
