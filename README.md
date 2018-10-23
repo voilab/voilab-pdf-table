@@ -106,6 +106,25 @@ table.onPageAdd(function (table, row, ev) {
 
 ## Changelogs
 
+### Col span
+
+You can customize the single cells width by defining the "columnSpan" property and defining an object instead of a plain text content.
+
+```js
+    const tableBody = [
+        {
+            columnA: "firstRowFirstCell",
+            columnB: "firstRowSecondCell"
+        },
+        {
+            columnA: {
+                content:"secondRowUniqueCell", 
+                colSpan: 2
+            }
+        }
+    ]
+```
+
 ### 0.4.0
 Thank you, contributors!
 

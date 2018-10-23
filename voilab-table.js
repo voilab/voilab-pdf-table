@@ -81,9 +81,18 @@ var lodash = require('lodash'),
                 top: 0
             },
             data = row._renderedContent.data[column.id] || '',
+            colSpan = row._renderedContent.colSpan[column.id] || 1,
             renderer = isHeader ? column.headerRenderer : column.renderer,
             y = pos.y,
             x = pos.x;
+
+        if(colSpan && colSpan > 1) {
+            const columnIndex = self.getColumns().indexOf(column);
+            const nextCells = self.getColumns().slice(columnIndex, columnIndex+colSpan);
+            width = nextCells.reduce((sum,col)=>{
+                return sum + col.width;
+            },0);
+        }
 
         // Top and bottom padding (only if valign is not set)
         if (!column.valign) {
@@ -152,14 +161,31 @@ var lodash = require('lodash'),
             pos.y = self.pdf.y || self.pdf.page.margins.top;
         }
 
-        lodash.forEach(self.getColumns(), function (column) {
-            if ((!isHeader && column.fill) || (isHeader && column.headerFill)) {
-                addCellBackground(self, column, row, pos, index, isHeader);
+        // check if the column at the given index of the current row must be drawn or not (maybe because the previous cell has a colSpan > 1)
+        const skippedCell = (row, index) => {
+            if(index === 0){
+                return false;
             }
-            if ((!isHeader && column.border) || (isHeader && column.headerBorder)) {
-                addCellBorder(self, column, row, pos, isHeader);
+            const previousCells = self.getColumns().slice(0, index).map(col=>row[col.id]);
+            let toSkip = false;
+            previousCells.forEach((cell,cellIndex) => {
+                if(cell && cell.colSpan && cell.colSpan + cellIndex > index){
+                    toSkip = true;
+                }
+            })
+            return toSkip;
+        };
+
+        lodash.forEach(self.getColumns(), function (column, index) {
+            if(!skippedCell(row, index)){
+                if ((!isHeader && column.fill) || (isHeader && column.headerFill)) {
+                    addCellBackground(self, column, row, pos, index, isHeader);
+                }
+                if ((!isHeader && column.border) || (isHeader && column.headerBorder)) {
+                    addCellBorder(self, column, row, pos, isHeader);
+                }
+                addCell(self, column, row, pos, isHeader);
             }
-            addCell(self, column, row, pos, isHeader);
         });
 
         self.pdf.y = pos.y + row._renderedContent.height;
@@ -168,7 +194,7 @@ var lodash = require('lodash'),
     setRowHeight = function (self, row, isHeader) {
         var max_height = 0;
 
-        row._renderedContent = {data: {}, dataHeight: {}, contentHeight: {}};
+        row._renderedContent = {data: {}, dataHeight: {}, contentHeight: {}, colSpan: {}};
 
         lodash.forEach(self.getColumns(), function (column) {
             var renderer = isHeader ? column.headerRenderer : column.renderer,
@@ -194,7 +220,8 @@ var lodash = require('lodash'),
 
             // backup content so we don't need to call the renderer a second
             // time when really rendering the column
-            row._renderedContent.data[column.id] = content;
+            row._renderedContent.data[column.id] = Object.isObject(content) ? content.content : content;
+            row._renderedContent.colSpan[column.id] = Object.isObject(content) ? content.colSpan : 1;
             row._renderedContent.dataHeight[column.id] = height;
 
             // check max row height
