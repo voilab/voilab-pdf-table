@@ -56,19 +56,27 @@ var lodash = require('lodash'),
             bpos = {
                 x: pos.x + column.width,
                 y: pos.y + row._renderedContent.height
+            },
+            doStroke = function () {
+                var opacity = (!isHeader && column.borderOpacity) || (isHeader && column.headerBorderOpacity);
+                self.pdf.lineCap('square').opacity(opacity || 1).stroke().restore();
             };
 
         if (border.indexOf('L') !== -1) {
-            self.pdf.save().moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(pos.x, bpos.y);
+            doStroke();
         }
         if (border.indexOf('T') !== -1) {
-            self.pdf.save().moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(pos.x, pos.y).lineTo(bpos.x, pos.y);
+            doStroke();
         }
         if (border.indexOf('B') !== -1) {
-            self.pdf.save().moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(pos.x, bpos.y).lineTo(bpos.x, bpos.y);
+            doStroke();
         }
         if (border.indexOf('R') !== -1) {
-            self.pdf.save().moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y).lineCap('square').stroke().restore();
+            self.pdf.save().moveTo(bpos.x, pos.y).lineTo(bpos.x, bpos.y);
+            doStroke();
         }
 
         self.emitter.emit('cell-border-added', self, column, row, isHeader);
@@ -82,6 +90,7 @@ var lodash = require('lodash'),
             },
             data = row._renderedContent.data[column.id] || '',
             renderer = isHeader ? column.headerRenderer : column.renderer,
+            cellAdded = isHeader ? column.headerCellAdded : column.cellAdded,
             y = pos.y,
             x = pos.x;
 
@@ -126,6 +135,8 @@ var lodash = require('lodash'),
             height: row._renderedContent.height,
             width: width
         }));
+
+        cellAdded && cellAdded(self, row, column, { x: x, y: self.pdf.y, baseY: y }, padding, isHeader);
 
         pos.x += column.width;
     },
@@ -172,13 +183,13 @@ var lodash = require('lodash'),
 
         lodash.forEach(self.getColumns(), function (column) {
             var renderer = isHeader ? column.headerRenderer : column.renderer,
-                content = renderer ? renderer(self, row, false) : row[column.id],
+                content = renderer ? renderer(self, row, false, column) : row[column.id],
                 height = !content ? 1 : self.pdf.heightOfString(content, lodash.assign(lodash.clone(column), {
                     width: column.width - getPaddingValue('horizontal', column.padding)
                 })),
                 column_height = isHeader ? column.headerHeight : column.height;
 
-            // Ssetup the content height
+            // Setup the content height
             row._renderedContent.contentHeight[column.id] = height;
 
             // Continue with the row height
@@ -514,18 +525,6 @@ lodash.assign(PdfTable.prototype, {
     },
 
     /**
-     * Temporary hack to manage overriden addPage() for pdfkit
-     *
-     * @deprecated
-     * @param {Function} fn
-     * @return {PdfTable}
-     */
-    setNewPageFn: function (fn) {
-        console.log('setNewPageFn is deprecated. Adding a page during process is automatic now. It will be removed on the next release');
-        return this;
-    },
-
-    /**
      * Add a plugin
      *
      * @param {Object} plugin the instanciated plugin
@@ -533,7 +532,10 @@ lodash.assign(PdfTable.prototype, {
      */
     addPlugin: function (plugin) {
         if (!plugin || !plugin.configure) {
-            throw new Error('Plugin [' + (plugin && plugin.id) + '] must have a configure() method.');
+            var err = new Error('Plugin [' + (plugin && plugin.id) + '] must have a configure() method.');
+            err.module = 'pdftable';
+            err.code = 2;
+            throw err;
         }
         this.plugins.push(plugin);
         plugin.configure(this);
@@ -573,15 +575,19 @@ lodash.assign(PdfTable.prototype, {
     },
 
     /**
-     * Define a column. Config array is mostly what we find in .text()
+     * Define a column. Config array is mostly what we find in .text(), plus:
      *
      * <ul>
      *     <li><i>String</i> <b>id</b>: column id</li>
      *     <li><i>Function</i> <b>renderer</b>: renderer function for cell.
      *     Recieve (PdfTable table, row, draw).</li>
+     *     <li><i>Function</i> <b>cellAdded</b>: renderer function for cell,
+     *     after main data is drawn. Recieve (PdfTable table, row, draw).</li>
      *     <li><i>Boolean</i> <b>hidden</b>: True to define the column as
      *     hidden (default to false)</li>
      *     <li><i>String</i> <b>border</b>: cell border (LTBR)</li>
+     *     <li><i>Number</i> <b>borderOpacity</b>: cell border opacity, from 0
+     *     to 1</li>
      *     <li><i>Number</i> <b>width</b>: column width</li>
      *     <li><i>Number</i> <b>height</b>: min height for cell (default to
      *     standard linebreak)</li>
@@ -601,7 +607,12 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>String</i> <b>header</b>: column header text</li>
      *     <li><i>Function</i> <b>headerRenderer</b>: renderer function for
      *     header cell. Recieve (PdfTable table, row)</li>
+     *     <li><i>Function</i> <b>haederCellAdded</b>: renderer function for
+     *     cell, after main data is drawn. Recieve (PdfTable table, row,
+     *     draw).</li>
      *     <li><i>String</i> <b>headerBorder</b>: cell border (LTBR)</li>
+     *     <li><i>Number</i> <b>headerBorderOpacity</b>: cell border opacity,
+     *     from 0 to 1</li>
      *     <li><i>Boolean</i> <b>headerFill</b>: True to fill the header with
      *     the predefined color (with pdf.fillColor(color))</li>
      *     <li><i>Number</i> <b>headerHeight</b>: min height for cell (default
@@ -651,7 +662,7 @@ lodash.assign(PdfTable.prototype, {
      *
      * @see addColumn
      * @param {Array} columns
-     * @param {Boolean} add true to add these columns to existing columns
+     * @param {Boolean} [add] true to add these columns to existing columns
      * @return {PdfTable}
      */
     setColumns: function (columns, add) {
@@ -668,7 +679,7 @@ lodash.assign(PdfTable.prototype, {
     /**
      * Get all table columns
      *
-     * @param {Boolean} withHidden true to get hidden columns too
+     * @param {Boolean} [withHidden] true to get hidden columns too
      * @return {Array}
      */
     getColumns: function (withHidden) {
@@ -787,7 +798,7 @@ lodash.assign(PdfTable.prototype, {
      *
      * @param {String} columnId
      * @param {Number} width
-     * @param {Boolean} silent True to prevent event to be emitted
+     * @param {Boolean} [silent] True to prevent event to be emitted
      * @return {PdfTable}
      */
     setColumnWidth: function (columnId, width, silent) {
@@ -812,7 +823,7 @@ lodash.assign(PdfTable.prototype, {
      * @param {String} columnId column string index
      * @param {String} key definition name (align, etc.)
      * @param {mixed} value definition value
-     * @param {Boolean} silent True to prevent event to be emitted
+     * @param {Boolean} [silent] True to prevent event to be emitted
      * @return {PdfTable}
      */
     setColumnParam: function (columnId, key, value, silent) {
@@ -842,7 +853,10 @@ lodash.assign(PdfTable.prototype, {
         this.emitter.emit('body-add', this, data);
 
         if (!this.pdf.page) {
-            throw new Error("No page available. Add a page to the PDF before calling addBody()");
+            var err = new Error("No page available. Add a page to the PDF before calling addBody()");
+            err.module = 'pdftable';
+            err.code = 1;
+            throw err;
         }
 
         if (this.showHeaders) {

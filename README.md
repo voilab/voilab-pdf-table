@@ -6,7 +6,7 @@ PdfKit wrapper that helps to draw informations in simple tables.
 ## Installation
 
 ```
-node install --save voilab-pdf-table
+npm install --save voilab-pdf-table
 ```
 
 ## Usage
@@ -106,6 +106,14 @@ table.onPageAdd(function (table, row, ev) {
 
 ## Changelogs
 
+### 0.4.1
+Thank you, contributors!
+
+**From #vikram1992**
+
++ added `headerOpacity` and `headerBorderOpacity` in column configuration
++ added `headerCellAdded` and `cellAdded` as a function in column configuration
+
 ### 0.4.0
 Thank you, contributors!
 
@@ -116,7 +124,7 @@ Thank you, contributors!
 
 **From #cbwebdevelopment**
 
-+ added `addonCellBackgroundAdd` and `onCellBackgroundAdded` events
++ added `onCellBackgroundAdd` and `onCellBackgroundAdded` events
 + added `onCellBorderAdd` and `onCellBorderAdded` events
 + the current row index is passed in events
 + some modifications about pos calculation
