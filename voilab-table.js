@@ -90,6 +90,7 @@ var lodash = require('lodash'),
             },
             data = row._renderedContent.data[column.id] || '',
             renderer = isHeader ? column.headerRenderer : column.renderer,
+            cellAdded = isHeader ? column.headerCellAdded : column.cellAdded,
             y = pos.y,
             x = pos.x;
 
@@ -134,6 +135,8 @@ var lodash = require('lodash'),
             height: row._renderedContent.height,
             width: width
         }));
+
+        cellAdded && cellAdded(self, row, column, { x: x, y: self.pdf.y, baseY: y }, padding, isHeader);
 
         pos.x += column.width;
     },
@@ -180,7 +183,7 @@ var lodash = require('lodash'),
 
         lodash.forEach(self.getColumns(), function (column) {
             var renderer = isHeader ? column.headerRenderer : column.renderer,
-                content = renderer ? renderer(self, row, false) : row[column.id],
+                content = renderer ? renderer(self, row, false, column) : row[column.id],
                 height = !content ? 1 : self.pdf.heightOfString(content, lodash.assign(lodash.clone(column), {
                     width: column.width - getPaddingValue('horizontal', column.padding)
                 })),
@@ -578,6 +581,8 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>String</i> <b>id</b>: column id</li>
      *     <li><i>Function</i> <b>renderer</b>: renderer function for cell.
      *     Recieve (PdfTable table, row, draw).</li>
+     *     <li><i>Function</i> <b>cellAdded</b>: renderer function for cell,
+     *     after main data is drawn. Recieve (PdfTable table, row, draw).</li>
      *     <li><i>Boolean</i> <b>hidden</b>: True to define the column as
      *     hidden (default to false)</li>
      *     <li><i>String</i> <b>border</b>: cell border (LTBR)</li>
@@ -602,6 +607,9 @@ lodash.assign(PdfTable.prototype, {
      *     <li><i>String</i> <b>header</b>: column header text</li>
      *     <li><i>Function</i> <b>headerRenderer</b>: renderer function for
      *     header cell. Recieve (PdfTable table, row)</li>
+     *     <li><i>Function</i> <b>haederCellAdded</b>: renderer function for
+     *     cell, after main data is drawn. Recieve (PdfTable table, row,
+     *     draw).</li>
      *     <li><i>String</i> <b>headerBorder</b>: cell border (LTBR)</li>
      *     <li><i>Number</i> <b>headerBorderOpacity</b>: cell border opacity,
      *     from 0 to 1</li>
