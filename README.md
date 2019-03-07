@@ -112,6 +112,7 @@ Thank you, contributors!
 **From #vikram1992**
 
 + added `headerOpacity` and `headerBorderOpacity` in column configuration
++ added `headerCellAdded` and `cellAdded` as a function in column configuration
 
 ### 0.4.0
 Thank you, contributors!

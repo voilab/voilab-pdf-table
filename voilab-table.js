@@ -186,7 +186,7 @@ var lodash = require('lodash'),
                 })),
                 column_height = isHeader ? column.headerHeight : column.height;
 
-            // Ssetup the content height
+            // Setup the content height
             row._renderedContent.contentHeight[column.id] = height;
 
             // Continue with the row height
@@ -522,18 +522,6 @@ lodash.assign(PdfTable.prototype, {
     },
 
     /**
-     * Temporary hack to manage overriden addPage() for pdfkit
-     *
-     * @deprecated
-     * @param {Function} fn
-     * @return {PdfTable}
-     */
-    setNewPageFn: function (fn) {
-        console.log('setNewPageFn is deprecated. Adding a page during process is automatic now. It will be removed on the next release');
-        return this;
-    },
-
-    /**
      * Add a plugin
      *
      * @param {Object} plugin the instanciated plugin
@@ -541,7 +529,10 @@ lodash.assign(PdfTable.prototype, {
      */
     addPlugin: function (plugin) {
         if (!plugin || !plugin.configure) {
-            throw new Error('Plugin [' + (plugin && plugin.id) + '] must have a configure() method.');
+            var err = new Error('Plugin [' + (plugin && plugin.id) + '] must have a configure() method.');
+            err.module = 'pdftable';
+            err.code = 2;
+            throw err;
         }
         this.plugins.push(plugin);
         plugin.configure(this);
@@ -581,7 +572,7 @@ lodash.assign(PdfTable.prototype, {
     },
 
     /**
-     * Define a column. Config array is mostly what we find in .text()
+     * Define a column. Config array is mostly what we find in .text(), plus:
      *
      * <ul>
      *     <li><i>String</i> <b>id</b>: column id</li>
@@ -663,7 +654,7 @@ lodash.assign(PdfTable.prototype, {
      *
      * @see addColumn
      * @param {Array} columns
-     * @param {Boolean} add true to add these columns to existing columns
+     * @param {Boolean} [add] true to add these columns to existing columns
      * @return {PdfTable}
      */
     setColumns: function (columns, add) {
@@ -680,7 +671,7 @@ lodash.assign(PdfTable.prototype, {
     /**
      * Get all table columns
      *
-     * @param {Boolean} withHidden true to get hidden columns too
+     * @param {Boolean} [withHidden] true to get hidden columns too
      * @return {Array}
      */
     getColumns: function (withHidden) {
@@ -799,7 +790,7 @@ lodash.assign(PdfTable.prototype, {
      *
      * @param {String} columnId
      * @param {Number} width
-     * @param {Boolean} silent True to prevent event to be emitted
+     * @param {Boolean} [silent] True to prevent event to be emitted
      * @return {PdfTable}
      */
     setColumnWidth: function (columnId, width, silent) {
@@ -824,7 +815,7 @@ lodash.assign(PdfTable.prototype, {
      * @param {String} columnId column string index
      * @param {String} key definition name (align, etc.)
      * @param {mixed} value definition value
-     * @param {Boolean} silent True to prevent event to be emitted
+     * @param {Boolean} [silent] True to prevent event to be emitted
      * @return {PdfTable}
      */
     setColumnParam: function (columnId, key, value, silent) {
@@ -854,7 +845,10 @@ lodash.assign(PdfTable.prototype, {
         this.emitter.emit('body-add', this, data);
 
         if (!this.pdf.page) {
-            throw new Error("No page available. Add a page to the PDF before calling addBody()");
+            var err = new Error("No page available. Add a page to the PDF before calling addBody()");
+            err.module = 'pdftable';
+            err.code = 1;
+            throw err;
         }
 
         if (this.showHeaders) {
