@@ -184,7 +184,7 @@ var lodash = require('lodash'),
         lodash.forEach(self.getColumns(), function (column) {
             var renderer = isHeader ? column.headerRenderer : column.renderer,
                 content = renderer ? renderer(self, row, false, column) : row[column.id],
-                height = !content ? 1 : self.pdf.heightOfString(content, lodash.assign(lodash.clone(column), {
+                height = !content || column.ellipsis ? 1 : self.pdf.heightOfString(content, lodash.assign(lodash.clone(column), {
                     width: column.width - getPaddingValue('horizontal', column.padding)
                 })),
                 column_height = isHeader ? column.headerHeight : column.height;
