@@ -31,5 +31,9 @@
       "email": "fabien@voilab.ch"
     }
   ],
-  "directories": {}
+  "directories": {},
+  "devDependencies": {
+    "express": "^4.17.1",
+    "pdfkit": "^0.10.0"
+  }
 }

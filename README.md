@@ -106,6 +106,15 @@ table.onPageAdd(function (table, row, ev) {
 
 ## Changelogs
 
+### 0.5.0
+**From #Drieger**
+
++ if value is `Number(0)` the renderer displays it. It could be a breaking
+change, so the version is bumped to 0.5.0
+
+### 0.4.2
++ added ellipsis support (no height calculation is done for this cell)
+
 ### 0.4.1
 Thank you, contributors!
 
