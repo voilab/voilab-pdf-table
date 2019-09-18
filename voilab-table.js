@@ -88,7 +88,7 @@ var lodash = require('lodash'),
                 left: 0,
                 top: 0
             },
-            data = row._renderedContent.data[column.id] || '',
+            data = row._renderedContent.data[column.id] || row._renderedContent.data[column.id] === 0 ? row._renderedContent.data[column.id] : '',
             renderer = isHeader ? column.headerRenderer : column.renderer,
             cellAdded = isHeader ? column.headerCellAdded : column.cellAdded,
             y = pos.y,
