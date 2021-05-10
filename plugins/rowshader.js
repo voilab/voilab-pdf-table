@@ -52,7 +52,7 @@ var lodash = require('lodash'),
        * Offset the header height if a header is drawn on each new page
        * @var {Boolean}
        */
-      headerOffset: false,
+      offsetHeader: false,
 
     }, lodash.clone(conf || {}));
   };
