@@ -106,6 +106,15 @@ table.onPageAdd(function (table, row, ev) {
 
 ## Changelogs
 
+### 0.5.1
+**From #End-S**
+
++ added rowshader plugin (see https://github.com/voilab/voilab-pdf-table/pull/42)
+
+**various**
+
++ updated dependancies
+
 ### 0.5.0
 **From #Drieger**
 

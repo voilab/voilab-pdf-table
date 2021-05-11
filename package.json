@@ -1,6 +1,6 @@
 {
   "name": "voilab-pdf-table",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "PdfKit wrapper that helps to draw informations in simple tables.",
   "main": "voilab-table.js",
   "scripts": {
@@ -34,6 +34,6 @@
   "directories": {},
   "devDependencies": {
     "express": "^4.17.1",
-    "pdfkit": "^0.10.0"
+    "pdfkit": "^0.12.1"
   }
 }
