@@ -878,6 +878,7 @@ lodash.assign(PdfTable.prototype, {
             self.emitter.emit('row-added', self, row, rowIndex);
         });
         this.emitter.emit('body-added', this, data);
+        self.pdf.x = self.pdf.page.margins.left;
 
         return this;
     },
