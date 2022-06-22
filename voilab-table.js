@@ -144,7 +144,7 @@ var lodash = require('lodash'),
     addRow = function (self, row, index, isHeader) {
         var pos = {
                 x: self.pos.x || self.pdf.page.margins.left,
-                y: self.pdf.y
+                y: index === 0 ? self.pos.y : self.pdf.y
             },
             ev = {
                 cancel: false
